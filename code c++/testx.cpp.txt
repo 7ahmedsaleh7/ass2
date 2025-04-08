@@ -1,0 +1,118 @@
+#include <iostream>
+#include <sstream>
+#include <cctype>
+#include <string>
+
+using namespace std;
+
+enum CharClass {
+    LETTER, DIGIT, UNKNOWN, END_OF_FILE
+};
+
+enum TokenCode {
+    INT_LIT = 10, IDENT = 11, ASSIGN_OP = 20, ADD_OP = 21,
+    SUB_OP = 22, MULT_OP = 23, DIV_OP = 24, LEFT_PAREN = 25,
+    RIGHT_PAREN = 26, SEMICOLON = 27, EOF_TOKEN = -1
+};
+
+class Lexer {
+private:
+    CharClass charClass;
+    string lexeme;
+    char nextChar;
+    int nextToken;
+    istringstream input;
+
+public:
+    Lexer(const string& data) : input(data) {
+        getChar();
+    }
+
+    void addChar() {
+        if (lexeme.length() <= 98)
+            lexeme += nextChar;
+        else
+            cout << "Error - lexeme is too long" << endl;
+    }
+
+    void getChar() {
+        if (input.get(nextChar)) {
+            if (isalpha(nextChar)) charClass = LETTER;
+            else if (isdigit(nextChar)) charClass = DIGIT;
+            else charClass = UNKNOWN;
+        }
+        else {
+            charClass = END_OF_FILE;
+        }
+    }
+
+    void getNonBlank() {
+        while (isspace(nextChar)) getChar();
+    }
+
+    int lookup(char ch) {
+        switch (ch) {
+        case '(': addChar(); return LEFT_PAREN;
+        case ')': addChar(); return RIGHT_PAREN;
+        case '+': addChar(); return ADD_OP;
+        case '-': addChar(); return SUB_OP;
+        case '*': addChar(); return MULT_OP;
+        case '/': addChar(); return DIV_OP;
+        case ';': addChar(); return SEMICOLON;
+        case '=': addChar(); return ASSIGN_OP;
+        default:  addChar(); return EOF_TOKEN;
+        }
+    }
+
+    int lex() {
+        lexeme.clear();
+        getNonBlank();
+
+        switch (charClass) {
+        case LETTER:
+            addChar(); getChar();
+            while (charClass == LETTER || charClass == DIGIT) {
+                addChar(); getChar();
+            }
+            nextToken = IDENT;
+            break;
+
+        case DIGIT:
+            addChar(); getChar();
+            while (charClass == DIGIT) {
+                addChar(); getChar();
+            }
+            nextToken = INT_LIT;
+            break;
+
+        case UNKNOWN:
+            nextToken = lookup(nextChar);
+            getChar();
+            break;
+
+        case END_OF_FILE:
+            nextToken = EOF_TOKEN;
+            lexeme = "EOF";
+            break;
+        }
+        cout << "Next token is: " << nextToken << ", Next lexeme is " << lexeme << endl;
+        return nextToken;
+    }
+
+    void analyze() {
+        while (nextToken != EOF_TOKEN) {
+            lex();
+        }
+    }
+};
+
+int main() {
+    string inputLine;
+    cout << "Enter an arithmetic expression like : ( sum = 9 + 2 * 5;): ";
+    getline(cin, inputLine); // Read full line including spaces
+
+    Lexer lexer(inputLine);
+    lexer.analyze();
+
+    return 0;
+}
